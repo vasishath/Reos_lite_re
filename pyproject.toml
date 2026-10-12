@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reoslite"
+version = "0.1.0"
+description = "Open-source control for iota / Cube26 Reos Lite Bluetooth LE lights"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = ["bleak>=0.21"]
+
+[project.scripts]
+reoslite = "reoslite.__main__:main"
+
+[tool.setuptools]
+packages = ["reoslite"]
