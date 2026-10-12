@@ -243,7 +243,11 @@ def turn_off(speed: int = 5) -> bytes:
 
 
 def turn_on(r: int = 255, g: int = 255, b: int = 255,
-            brightness: int = MAX_BRIGHTNESS, speed: int = 5) -> bytes:
+            brightness: int = MAX_BRIGHTNESS, speed: int = 5, apply_gamma: bool = True) -> bytes:
+    """Fade on. The app re-sends its stored colour, which is already
+    gamma-corrected, so this applies GAMMA by default."""
+    if apply_gamma:
+        r, g, b = gamma(r), gamma(g), gamma(b)
     return fade(r, g, b, brightness, speed)
 
 
@@ -270,12 +274,15 @@ def power_on_behavior(last_color: bool) -> bytes:
 
 
 def timer(action: TimerAction, at: _dt.datetime, r: int = 0, g: int = 0, b: int = 0,
-          brightness: int = MAX_BRIGHTNESS) -> bytes:
+          brightness: int = MAX_BRIGHTNESS, apply_gamma: bool = True) -> bytes:
     """One-shot sleep/wake timer at an absolute time (light's clock).
 
     The app sends the last-used colour + brightness 200 with it; for
-    TimerAction.ON that is the colour the light comes on with.
+    TimerAction.ON that is the colour the light comes on with. Like the app,
+    the colour is gamma-corrected by default.
     """
+    if apply_gamma:
+        r, g, b = gamma(r), gamma(g), gamma(b)
     return build_packet(Cmd.TIMER, [int(action)] + _date_bytes(at) + [r, g, b, brightness])
 
 

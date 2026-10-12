@@ -1,0 +1,13 @@
+{
+  "name": "Reos Lite Control",
+  "short_name": "Reos Lite",
+  "description": "Open-source Bluetooth controller for iota / Cube26 Reos Lite bulbs",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#121211",
+  "theme_color": "#f5b700",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

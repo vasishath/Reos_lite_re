@@ -2,157 +2,271 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5b700">
+<meta name="description" content="Open-source Bluetooth controller for iota / Cube26 Reos Lite bulbs">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>Reos Lite Control</title>
 <style>
   :root {
-    --bg: #f6f6f4; --card: #ffffff; --fg: #1d1d1b; --muted: #6b6b66;
-    --line: #e2e2dc; --accent: #f5b700; --accent-fg: #1d1d1b; --danger: #c0392b;
+    --bg: #f4f3ef; --card: #ffffff; --fg: #1d1d1b; --muted: #6b6a64; --line: #e3e1da;
+    --soft: #efede6; --accent: #f5b700; --accent-fg: #1d1d1b; --danger: #b93a2e;
+    --ok: #2e9d57; --warn: #d08a00; --off: #a3a19a; --shadow: 0 1px 2px rgba(0,0,0,.05);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #141413; --card: #1f1f1d; --fg: #ecebe6; --muted: #a09f98;
-      --line: #33332f; --accent: #f5b700; --accent-fg: #141413; --danger: #e5645a;
+      --bg: #121211; --card: #1c1c1a; --fg: #ecebe6; --muted: #a09e96; --line: #2f2f2b;
+      --soft: #262623; --accent: #f5b700; --accent-fg: #121211; --danger: #e8685c;
+      --ok: #4cc27a; --warn: #f0b03a; --off: #6c6b66; --shadow: none;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #141413; --card: #1f1f1d; --fg: #ecebe6; --muted: #a09f98;
-    --line: #33332f; --accent: #f5b700; --accent-fg: #141413; --danger: #e5645a;
+    --bg: #121211; --card: #1c1c1a; --fg: #ecebe6; --muted: #a09e96; --line: #2f2f2b;
+    --soft: #262623; --accent: #f5b700; --accent-fg: #121211; --danger: #e8685c;
+    --ok: #4cc27a; --warn: #f0b03a; --off: #6c6b66; --shadow: none;
   }
   * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
   body { margin: 0; background: var(--bg); color: var(--fg);
          font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 560px; margin: 0 auto; padding: 16px; }
-  h1 { font-size: 20px; margin: 4px 0 2px; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 10px; }
-  .sub { color: var(--muted); margin: 0 0 16px; }
-  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+  main { max-width: 600px; margin: 0 auto;
+         padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
+                  calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  header { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
+  header svg { flex: none; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -.01em; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin: 0; font-weight: 600; }
+  h3 { font-size: 14px; margin: 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px;
+          margin-bottom: 12px; box-shadow: var(--shadow); }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; min-height: 28px; }
   .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .row + .row { margin-top: 10px; }
+  .row + .row, .row + .hint, .hint + .row { margin-top: 10px; }
+  .grow { flex: 1; min-width: 0; }
+  .hint { font-size: 13px; color: var(--muted); margin: 0; }
   button, select, input[type=time], input[type=number] {
-    font: inherit; color: var(--fg); background: transparent; border: 1px solid var(--line);
-    border-radius: 8px; padding: 8px 12px; min-height: 40px; }
-  button { cursor: pointer; }
+    font: inherit; color: var(--fg); background: var(--card); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 12px; min-height: 40px; }
+  button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
   button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+  button.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 6px 8px; min-height: 32px; }
   button.danger { color: var(--danger); }
+  button.armed { background: var(--danger); border-color: var(--danger); color: #fff; }
   button:disabled { opacity: .45; cursor: default; }
-  input[type=color] { width: 56px; height: 40px; border: 1px solid var(--line); border-radius: 8px; padding: 2px; background: transparent; }
-  input[type=range] { flex: 1; min-width: 140px; accent-color: var(--accent); }
-  .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin-top: 10px; }
-  .swatches button { min-height: 32px; padding: 0; border-radius: 6px; }
-  .days label { display: inline-flex; align-items: center; gap: 3px; margin-right: 6px; }
-  #status { font-size: 13px; color: var(--muted); }
-  #devices { font-size: 13px; color: var(--muted); margin-top: 8px; }
-  ul { margin: 0; padding-left: 18px; }
-  li { margin: 4px 0; }
-  pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; color: var(--muted); max-height: 160px; overflow: auto; margin: 0; }
-  .grow { flex: 1; }
-  #controls[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+  button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; min-width: 64px; }
+  .seg button + button { border-left: 1px solid var(--line); }
+
+  /* lights */
+  .lights { display: grid; gap: 8px; }
+  .light { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 10px; align-items: center;
+           padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--soft); }
+  .light .meta { grid-column: 2 / 4; font-size: 12px; color: var(--muted); }
+  .bulb { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--line); position: relative; flex: none; }
+  .bulb::after { content: ""; position: absolute; right: -3px; bottom: -3px; width: 11px; height: 11px;
+                 border-radius: 50%; border: 2px solid var(--soft); background: var(--off); }
+  .bulb[data-status="connected"]::after { background: var(--ok); }
+  .bulb[data-status="connecting"]::after, .bulb[data-status="reconnecting"]::after { background: var(--warn); }
+  .name-input { font: inherit; font-weight: 600; color: var(--fg); background: transparent; border: 1px solid transparent;
+                border-radius: 8px; padding: 4px 6px; margin-left: -6px; width: 100%; min-width: 0; }
+  .name-input:hover { border-color: var(--line); }
+  .name-input:focus { border-color: var(--accent); background: var(--card); outline: none; }
+  .light-actions { display: flex; gap: 6px; align-items: center; }
+  .empty { text-align: center; padding: 18px 8px 6px; }
+  .empty p { margin: 0 0 12px; color: var(--muted); }
+
+  /* switch */
+  .switch { position: relative; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--muted); }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .switch .track { width: 38px; height: 22px; border-radius: 11px; background: var(--line); position: relative; transition: background .15s; flex: none; }
+  .switch .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+  .switch input:checked + .track { background: var(--ok); }
+  .switch input:checked + .track::after { transform: translateX(16px); }
+  .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* colour */
+  .preview { position: relative; height: 112px; border-radius: 12px; border: 1px solid var(--line); overflow: hidden;
+             display: flex; align-items: flex-end; justify-content: space-between; padding: 10px 12px;
+             background: #fff; transition: background-color .15s; }
+  .preview .tag { background: rgba(0,0,0,.55); color: #fff; font-size: 12px; padding: 3px 8px; border-radius: 999px; pointer-events: none; }
+  .preview input[type=color] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+  .bri-row { display: flex; align-items: center; gap: 10px; }
+  .bri-row output { min-width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); height: 28px; }
+  .swatches { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; margin-top: 12px; }
+  .swatches button { min-height: 34px; padding: 0; border-radius: 8px; border: 1px solid rgba(0,0,0,.12); }
+  .swatches button[aria-pressed="true"] { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+  /* schedules */
+  .sched-light + .sched-light { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .rules { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+  .rule { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: var(--soft); }
+  .rule .time { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .rule .what { font-size: 13px; color: var(--muted); }
+  .rule.disabled .time, .rule.disabled .what { opacity: .5; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(0,0,0,.2); vertical-align: -1px; margin-right: 4px; }
+  .days { display: flex; gap: 4px; flex-wrap: wrap; }
+  .days button { min-width: 40px; padding: 6px 0; min-height: 36px; }
+  .add-form { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+
+  details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; color: var(--muted); max-height: 220px; overflow: auto; margin: 10px 0 0; }
+
+  #controls[aria-disabled="true"] .card { opacity: .5; }
+  #controls[aria-disabled="true"] .card button,
+  #controls[aria-disabled="true"] .card input,
+  #controls[aria-disabled="true"] .card select { pointer-events: none; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px);
+           max-width: calc(100% - 32px); background: var(--fg); color: var(--bg); padding: 10px 14px; border-radius: 12px;
+           font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 10; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.error { background: var(--danger); color: #fff; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 <main>
-  <h1>Reos Lite Control</h1>
-  <p class="sub">Open-source replacement for the discontinued iota Reos Lite app. Needs Chrome/Edge (Android, Windows, macOS, ChromeOS, Linux) over HTTPS or localhost.</p>
+  <header>
+    <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="27" r="19" fill="#f5b700"/><rect x="24" y="44" width="16" height="12" rx="3" fill="currentColor" opacity=".7"/></svg>
+    <h1>Reos Lite</h1>
+  </header>
 
-  <section>
-    <div class="row">
-      <button class="primary" id="connect">Add light</button>
-      <button id="disconnect" disabled>Disconnect all</button>
-      <span id="status" class="grow">Not connected</span>
+  <section class="card" aria-labelledby="lights-h">
+    <div class="card-head">
+      <h2 id="lights-h">Lights</h2>
+      <button class="primary" id="addLight">+ Add light</button>
     </div>
-    <div class="row">
-      <label><input type="checkbox" id="showAll"> Show all Bluetooth devices (if your light isn't listed)</label>
+    <div class="lights" id="lights"></div>
+    <div class="empty" id="empty">
+      <p>No lights yet. Power the bulb on, make sure no other phone is connected to it, then tap <b>Add light</b>.</p>
     </div>
-    <div id="devices"></div>
+    <div class="row" style="margin-top:12px">
+      <label class="switch"><input type="checkbox" id="showAll"><span class="track"></span>List every Bluetooth device when adding (if your light doesn't show up)</label>
+    </div>
+    <p class="hint" id="support" hidden></p>
   </section>
 
   <div id="controls" aria-disabled="true">
-    <section>
-      <h2>Power &amp; colour</h2>
-      <div class="row">
-        <button id="on">On</button>
-        <button id="off">Off</button>
-        <input type="color" id="color" value="#ffffff" aria-label="Colour">
-        <button id="apply">Set colour</button>
+    <section class="card" aria-labelledby="color-h">
+      <div class="card-head">
+        <h2 id="color-h">Colour</h2>
+        <div class="seg" role="group" aria-label="Power">
+          <button id="powerOn">On</button>
+          <button id="powerOff">Off</button>
+        </div>
       </div>
-      <div class="row">
+      <label class="preview" id="preview">
+        <span class="tag">Tap to pick a colour</span>
+        <span class="tag" id="hexTag">#FFFFFF</span>
+        <input type="color" id="color" value="#ffffff" aria-label="Pick a colour">
+      </label>
+      <div class="row bri-row">
         <label for="bri">Brightness</label>
         <input type="range" id="bri" min="5" max="200" value="200">
+        <output id="briOut" for="bri">100%</output>
       </div>
       <div class="swatches" id="swatches"></div>
     </section>
 
-    <section>
-      <h2>Effects</h2>
-      <div class="row">
+    <section class="card" aria-labelledby="fx-h">
+      <div class="card-head"><h2 id="fx-h">Effects</h2></div>
+      <div class="row" id="effects">
         <button data-effect="4">Candle</button>
-        <button data-effect="3">Strobe</button>
         <button data-effect="2">Kaleidoscope</button>
+        <button data-effect="3">Strobe</button>
         <button data-effect="0">Stop</button>
-        <button id="flash">Flash</button>
+        <button id="flash">Flash once</button>
       </div>
     </section>
 
-    <section>
-      <h2>Timer</h2>
+    <section class="card" aria-labelledby="timer-h">
+      <div class="card-head"><h2 id="timer-h">Timer</h2></div>
       <div class="row">
-        <select id="tAction"><option value="2">Turn off</option><option value="1">Turn on</option></select>
-        <span>in</span>
-        <input type="number" id="tMin" value="30" min="1" max="1440" style="width:90px"> <span>min</span>
-        <button id="tSet">Set</button>
-        <button id="tCancel">Cancel</button>
+        <div class="seg" role="group" aria-label="Timer action">
+          <button id="tOff" aria-pressed="true">Turn off</button>
+          <button id="tOn" aria-pressed="false">Turn on</button>
+        </div>
+        <select id="tMode" aria-label="Timer mode">
+          <option value="in">in</option>
+          <option value="at">at</option>
+        </select>
+        <span id="tInWrap"><input type="number" id="tMin" value="30" min="1" max="1440" inputmode="numeric" style="width:84px" aria-label="Minutes"> min</span>
+        <input type="time" id="tAt" value="07:00" hidden aria-label="Time">
+      </div>
+      <div class="row">
+        <button class="primary" id="tSet">Set timer</button>
+        <button id="tCancel">Cancel timer</button>
+        <span class="hint grow" id="tStatus"></span>
+      </div>
+      <p class="hint">"Turn on" uses the colour and brightness above.</p>
+    </section>
+
+    <section class="card" aria-labelledby="sched-h">
+      <div class="card-head">
+        <h2 id="sched-h">Schedules</h2>
+        <button class="ghost" id="sRefresh">Refresh</button>
+      </div>
+      <div id="sOut"></div>
+      <div class="add-form">
+        <h3>New schedule</h3>
+        <div class="row">
+          <div class="seg" role="group" aria-label="Schedule action">
+            <button id="sOn" aria-pressed="true">Turn on</button>
+            <button id="sOff" aria-pressed="false">Turn off</button>
+          </div>
+          <input type="time" id="sTime" value="07:00" aria-label="Schedule time">
+        </div>
+        <div class="row days" id="days" role="group" aria-label="Repeat on"></div>
+        <div class="row">
+          <button class="ghost" data-preset="127">Every day</button>
+          <button class="ghost" data-preset="62">Weekdays</button>
+          <button class="ghost" data-preset="65">Weekends</button>
+        </div>
+        <div class="row">
+          <button class="primary" id="sAdd">Add schedule</button>
+          <span class="hint grow">Each light stores up to 4. "Turn on" uses the colour above.</span>
+        </div>
       </div>
     </section>
 
-    <section>
-      <h2>Schedules (stored in the light, max 4)</h2>
+    <section class="card" aria-labelledby="set-h">
+      <div class="card-head"><h2 id="set-h">Light settings</h2></div>
       <div class="row">
-        <select id="sAction"><option value="1">On</option><option value="0">Off</option></select>
-        <input type="time" id="sTime" value="07:00">
-        <button id="sAdd">Add</button>
-        <button id="sList">Refresh</button>
-      </div>
-      <div class="row days" id="days"></div>
-      <div class="row"><ul id="sOut"></ul></div>
-    </section>
-
-    <section>
-      <h2>Settings</h2>
-      <div class="row">
-        <span>On power-up show</span>
-        <button data-pob="1">Last colour</button>
-        <button data-pob="0">White</button>
+        <span class="grow">After a power cut, come back</span>
+        <div class="seg" role="group" aria-label="Power-up colour">
+          <button data-pob="1">Last colour</button>
+          <button data-pob="0">White</button>
+        </div>
       </div>
       <div class="row">
-        <button id="info">Firmware / serial</button>
         <button id="sync">Sync clock</button>
         <button id="reset" class="danger">Factory reset</button>
       </div>
     </section>
 
-    <section>
-      <h2>Log</h2>
-      <pre id="log"></pre>
+    <section class="card">
+      <details>
+        <summary>Debug log</summary>
+        <pre id="log"></pre>
+      </details>
     </section>
   </div>
 </main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
-// Protocol: see docs/PROTOCOL.md.  Frame = 0F LEN CMD 00 PAYLOAD.. CHK FF FF
+// ---------------------------------------------------------------- protocol
+// See docs/PROTOCOL.md.  Frame = 0F LEN CMD 00 PAYLOAD.. CHK FF FF
 // Full 128-bit strings: iOS Web Bluetooth browsers (Bluefy, WebBLE) don't all accept 16-bit numbers.
 const uuid = n => `0000${n.toString(16)}-0000-1000-8000-00805f9b34fb`;
 const SVC = uuid(0xfff0), CH_INFO = uuid(0xfff1), CH_CMD = uuid(0xfff3), CH_NOTIFY = uuid(0xfff4);
-const errMsg = e => e == null ? `unknown error (${e})`
-  : typeof e === 'string' ? e : [e.name, e.message].filter(Boolean).join(': ') || String(e);
-const bytes = v => new Uint8Array(v.buffer, v.byteOffset || 0, v.byteLength); // DataView -> bytes
 const GAMMA = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,8,8,8,9,9,9,10,10,10,11,11,11,12,12,13,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,24,24,25,25,26,27,27,28,29,29,30,31,32,32,33,34,35,35,36,37,38,39,39,40,41,42,43,44,45,46,47,48,49,50,50,51,52,54,55,56,57,58,59,60,61,62,63,64,66,67,68,69,70,72,73,74,75,77,78,79,81,82,83,85,86,87,89,90,92,93,95,96,98,99,101,102,104,105,107,109,110,112,114,115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142,144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255];
-const DAY = ['Su','M','T','W','Th','F','S'];
-
-const $ = id => document.getElementById(id);
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-const hex = b => Array.from(b, x => x.toString(16).padStart(2, '0')).join(' ');
-function log(s) { const el = $('log'); el.textContent = (s + '\n' + el.textContent).slice(0, 4000); }
+const MAX_BRI = 200;
 
 function packet(cmd, payload = []) {
   const body = [cmd, 0, ...payload.map(v => v & 0xff)];
@@ -167,6 +281,9 @@ const P = {
   syncTime: () => packet(0x01, [...dateBytes(new Date()), 0, 0]),
   color: (r, g, b, bri) => packet(0x03, [GAMMA[r], GAMMA[g], GAMMA[b], bri, 0, 0, 1, 0, 0, 0]),
   fade: (r, g, b, bri, speed = 5) => packet(0x0d, [r, g, b, bri, speed, 0, 0]),
+  // the app's "on" re-sends its stored (gamma-corrected) colour through FADE
+  on: (r, g, b, bri) => P.fade(GAMMA[r], GAMMA[g], GAMMA[b], bri),
+  off: () => P.fade(0, 0, 0, 0),
   effect: (k, r = 0, g = 0, b = 0, bri = 0) => packet(0x12, [k, 2, r, g, b, bri, 0, 0]),
   flash: (r, g, b, bri) => packet(0x0c, [5, 0, 1, GAMMA[r], GAMMA[g], GAMMA[b], bri, 0, 0]),
   powerOn: last => packet(0x05, [0, 1, last ? 0 : 1, 1]),
@@ -181,47 +298,184 @@ const P = {
   serial: () => packet(0x11, [0, 0]),
   reset: () => packet(0x0b, [0, 0]),
 };
+function parseSchedules(p) {
+  const rules = [], n = p[4] || 0;
+  for (let i = 0; i < n; i++) {
+    const r = p.slice(5 + 15 * i, 20 + 15 * i);
+    if (r.length < 15) break;
+    rules.push({ id: r[0], enabled: !!r[1], on: !!r[2], days: r[3], h: r[7], m: r[8], rgb: [r[11], r[12], r[13]], bri: r[14] });
+  }
+  return rules;
+}
+
+// ---------------------------------------------------------------- helpers
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const hex = b => Array.from(b, x => x.toString(16).padStart(2, '0')).join(' ');
+const pad = n => String(n).padStart(2, '0');
+const errMsg = e => e == null ? `unknown error (${e})`
+  : typeof e === 'string' ? e : [e.name, e.message].filter(Boolean).join(': ') || String(e);
+const bytes = v => new Uint8Array(v.buffer, v.byteOffset || 0, v.byteLength); // DataView -> bytes
+const hexToRgb = h => { const v = parseInt(h.slice(1), 16); return [v >> 16 & 255, v >> 8 & 255, v & 255]; };
+const rgbCss = ([r, g, b]) => `rgb(${r},${g},${b})`;
+const DAYS = ['Su', 'M', 'T', 'W', 'Th', 'F', 'S'];
+const daysText = m => m === 127 ? 'Every day' : m === 62 ? 'Weekdays' : m === 65 ? 'Weekends'
+  : DAYS.filter((_, i) => m & (1 << i)).join(' ') || 'Once';
+
+function log(s) { const el = $('log'); el.textContent = (s + '\n' + el.textContent).slice(0, 8000); }
+let toastTimer;
+function toast(msg, isError = false) {
+  const t = $('toast');
+  t.textContent = msg; t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), isError ? 5000 : 2200);
+  if (isError) log('! ' + msg);
+}
+// Two-tap confirm: alert/confirm/prompt are unreliable inside in-app browsers like Bluefy.
+function armed(btn, label, action) {
+  const orig = btn.textContent;
+  btn.onclick = () => {
+    if (btn.classList.contains('armed')) { btn.classList.remove('armed'); btn.textContent = orig; action(); return; }
+    btn.classList.add('armed'); btn.textContent = label;
+    setTimeout(() => { btn.classList.remove('armed'); btn.textContent = orig; }, 4000);
+  };
+}
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('reoslite:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('reoslite:' + k, JSON.stringify(v)); } catch {} },
+};
+
+// ---------------------------------------------------------------- state
+const names = store.get('names', {});
+const state = {
+  color: store.get('color', '#ffffff'),
+  bri: store.get('bri', MAX_BRI),
+  power: null,          // true/false once we've sent something
+  effect: null,
+  pob: store.get('pob', null),
+  timerOn: false,
+  schedOn: true,
+  days: 127,
+};
+let lites = [];
 
 class Lite {
-  constructor(device) { this.device = device; this.buf = []; this.waiters = {}; this.first = {}; this.queue = Promise.resolve(); }
-  get name() { return `${this.device.name} (${this.device.id.slice(0, 6)})`; }
+  constructor(device) {
+    this.device = device; this.id = device.id;
+    this.status = 'idle';       // idle | connecting | connected | reconnecting | lost
+    this.selected = true; this.version = null; this.serial = null; this.color = null;
+    this.rules = null; this.rulesError = null;
+    this.buf = []; this.waiters = {}; this.first = {}; this.latest = {};
+    this.queue = Promise.resolve(); this.userDisconnect = false;
+    device.addEventListener('gattserverdisconnected', () => this.onDisconnected());
+  }
+  get label() { return names[this.id] || this.device.name || 'Reos Lite'; }
+  get connected() { return this.status === 'connected'; }
+
   async connect() {
-    const server = await this.device.gatt.connect();
-    const svc = await server.getPrimaryService(SVC);
-    this.cmd = await svc.getCharacteristic(CH_CMD);
-    this.info = await svc.getCharacteristic(CH_INFO);
+    this.userDisconnect = false;
+    if (this.status !== 'reconnecting') this.status = 'connecting';
+    render();
     try {
-      this.notify = await svc.getCharacteristic(CH_NOTIFY);
-      this.notify.addEventListener('characteristicvaluechanged', e => this.onNotify(bytes(e.target.value)));
-      await this.notify.startNotifications();
-    } catch (e) { log('notifications unavailable: ' + errMsg(e)); }
+      const server = await this.device.gatt.connect();
+      const svc = await server.getPrimaryService(SVC);
+      this.cmd = await svc.getCharacteristic(CH_CMD);
+      this.info = await svc.getCharacteristic(CH_INFO);
+      try {
+        this.notify = await svc.getCharacteristic(CH_NOTIFY);
+        if (!this.listening) {
+          this.notify.addEventListener('characteristicvaluechanged', e => this.onNotify(bytes(e.target.value)));
+          this.listening = true;
+        }
+        await this.notify.startNotifications();
+      } catch (e) { log(`${this.label}: notifications unavailable: ${errMsg(e)}`); }
+      this.buf = []; this.status = 'connected'; this.attempts = 0;
+      render();
+      this.send(P.syncTime());
+      this.loadDetails();
+    } catch (e) {
+      if (!this.retrying) { this.status = 'lost'; render(); }
+      throw e;
+    }
+  }
+  async loadDetails() {
+    try {
+      const v = bytes(await this.info.readValue());
+      log(`${this.label} FFF1: ${hex(v)}`);
+      if (v.length >= 13) this.version = `${v[11]}.${pad(v[12])}`;
+    } catch (e) { log(`${this.label}: version read failed: ${errMsg(e)}`); }
+    render();
+    try {
+      const s = await this.request(P.serial(), 0x11);
+      this.serial = new TextDecoder().decode(s.slice(4, 20)).replace(/[\0\s]+$/, '');
+    } catch (e) { log(`${this.label}: no serial reply`); }
+    render();
+    await this.loadRules();
+  }
+  async loadRules() {
+    try { this.rules = parseSchedules(await this.request(P.scheduleRead(), 0x14, 4000)); this.rulesError = null; }
+    catch (e) { this.rulesError = errMsg(e); }
+    renderSchedules();
+  }
+  disconnect() {
+    this.userDisconnect = true;
+    try { this.device.gatt.disconnect(); } catch {}
+    this.status = 'idle'; render();
+  }
+  async onDisconnected() {
+    this.cmd = null;
+    // Only auto-reconnect a link that was up; ignore drops during our own retries.
+    if (this.userDisconnect || this.retrying || this.status !== 'connected') return;
+    log(`${this.label} disconnected`);
+    this.retrying = true;
+    // BLE links to these bulbs drop now and then; try to get it back quietly.
+    try {
+      for (let attempt = 1; attempt <= 3 && !this.userDisconnect; attempt++) {
+        this.status = 'reconnecting'; render();
+        await sleep(800 * attempt);
+        if (this.userDisconnect) break;
+        try { await this.connect(); toast(`${this.label} reconnected`); return; }
+        catch (e) { log(`${this.label}: reconnect ${attempt} failed: ${errMsg(e)}`); }
+      }
+      if (!this.userDisconnect) { this.status = 'lost'; render(); toast(`Lost connection to ${this.label}`, true); }
+    } finally { this.retrying = false; }
   }
   onNotify(d) {
-    log(`${this.device.name} <- ${hex(d)}`);
+    log(`${this.label} <- ${hex(d)}`);
     if (d[0] === 0x0f && d.length >= 3) this.first[d[2]] = d;
     if (!this.buf.length && d[0] !== 0x0f) return;
     this.buf.push(...d);
     while (this.buf.length >= 2 && this.buf.length >= this.buf[1] + 4) {
-      const pkt = this.buf.splice(0, this.buf[1] + 4);
+      const pkt = new Uint8Array(this.buf.splice(0, this.buf[1] + 4));
+      if (pkt[2] === 0x04) { this.color = [pkt[4], pkt[5], pkt[6]]; render(); }
       const w = this.waiters[pkt[2]]; delete this.waiters[pkt[2]];
-      if (w) w(new Uint8Array(pkt));
+      if (w) w(pkt);
       if (this.buf.length && this.buf[0] !== 0x0f) this.buf = [];
     }
   }
+  // Writes are serialised and split into 20-byte chunks like the original app.
+  // `pkt` may be a function so the newest value is picked at write time.
   send(pkt) {
-    // serialise writes; split into 20-byte chunks like the original app
     this.queue = this.queue.then(async () => {
-      for (let i = 0; i < pkt.length; i += 20) {
-        const part = pkt.slice(i, i + 20);
-        log(`${this.device.name} -> ${hex(part)}`);
+      const data = typeof pkt === 'function' ? pkt() : pkt;
+      if (!data || !this.cmd) return;
+      for (let i = 0; i < data.length; i += 20) {
+        const part = data.slice(i, i + 20);
+        log(`${this.label} -> ${hex(part)}`);
         const c = this.cmd, props = c.properties || {};
         if (c.writeValueWithResponse && props.write) await c.writeValueWithResponse(part);
         else if (c.writeValueWithoutResponse && props.writeWithoutResponse) await c.writeValueWithoutResponse(part);
         else await c.writeValue(part); // older API, still the only one some browsers have
-        if (i + 20 < pkt.length) await sleep(50);
+        if (i + 20 < data.length) await sleep(50);
       }
-    }).catch(e => log('write failed: ' + errMsg(e)));
+    }).catch(e => log(`${this.label}: write failed: ${errMsg(e)}`));
     return this.queue;
+  }
+  // Latest-wins: while a colour write is in flight, newer slider values replace the queued one.
+  sendLatest(key, pkt) {
+    const queued = key in this.latest;
+    this.latest[key] = pkt;
+    if (queued) return this.queue;
+    return this.send(() => { const p = this.latest[key]; delete this.latest[key]; return p; });
   }
   request(pkt, cmd, ms = 3000) {
     delete this.first[cmd];
@@ -236,114 +490,309 @@ class Lite {
   }
 }
 
-let lites = [];
-const rgb = () => { const v = parseInt($('color').value.slice(1), 16); return [v >> 16 & 255, v >> 8 & 255, v & 255]; };
-const bri = () => +$('bri').value;
-const all = pktFn => Promise.all(lites.map(l => l.send(pktFn(l))));
-
-function refreshUi() {
-  $('controls').setAttribute('aria-disabled', lites.length ? 'false' : 'true');
-  $('disconnect').disabled = !lites.length;
-  $('status').textContent = lites.length ? `${lites.length} light(s) connected` : 'Not connected';
-  $('devices').textContent = lites.map(l => l.name).join(' · ');
+const targets = () => lites.filter(l => l.connected && l.selected);
+const noTargets = () => toast(lites.some(l => l.connected) ? 'No light selected' : 'Connect a light first', true);
+function each(fn, latestKey) {
+  const ts = targets();
+  if (!ts.length) { noTargets(); return Promise.resolve(); }
+  return Promise.all(ts.map(l => latestKey ? l.sendLatest(latestKey, fn(l)) : l.send(fn(l))));
 }
 
-$('connect').onclick = async () => {
-  if (!navigator.bluetooth) { alert('Web Bluetooth is not available. Use Chrome or Edge over HTTPS (or localhost).'); return; }
-  let step = 'requestDevice';
+// ---------------------------------------------------------------- rendering
+let renderPending = false;
+function render() {
+  // Don't rebuild the cards while someone is typing a name.
+  if (document.activeElement && document.activeElement.classList.contains('name-input')) { renderPending = true; return; }
+  renderPending = false;
+  const box = $('lights');
+  box.textContent = '';
+  for (const l of lites) box.appendChild(lightCard(l));
+  $('empty').hidden = lites.length > 0;
+  const anyConnected = lites.some(l => l.connected);
+  $('controls').setAttribute('aria-disabled', anyConnected ? 'false' : 'true');
+  renderSchedules();
+}
+
+function lightCard(l) {
+  const card = document.createElement('div');
+  card.className = 'light';
+
+  const bulb = document.createElement('div');
+  bulb.className = 'bulb'; bulb.dataset.status = l.status;
+  bulb.style.background = l.connected && l.color ? rgbCss(l.color) : 'var(--line)';
+  bulb.title = l.status;
+
+  const name = document.createElement('input');
+  name.className = 'name-input'; name.value = l.label; name.setAttribute('aria-label', 'Light name');
+  name.onchange = () => {
+    const v = name.value.trim();
+    if (v && v !== l.device.name) names[l.id] = v; else delete names[l.id];
+    store.set('names', names); renderSchedules();
+  };
+  name.onkeydown = e => { if (e.key === 'Enter') name.blur(); };
+  name.onblur = () => { if (renderPending) setTimeout(render, 0); };
+
+  const actions = document.createElement('div');
+  actions.className = 'light-actions';
+  if (l.connected) {
+    const sw = document.createElement('label');
+    sw.className = 'switch'; sw.title = 'Send commands to this light';
+    sw.innerHTML = '<input type="checkbox"><span class="track"></span>';
+    const cb = sw.querySelector('input');
+    cb.checked = l.selected; cb.setAttribute('aria-label', `Control ${l.label}`);
+    cb.onchange = () => { l.selected = cb.checked; renderSchedules(); };
+    actions.appendChild(sw);
+  }
+  const btn = document.createElement('button');
+  btn.className = 'ghost';
+  if (l.connected) { btn.textContent = 'Disconnect'; btn.onclick = () => l.disconnect(); }
+  else if (l.status === 'connecting' || l.status === 'reconnecting') { btn.textContent = 'Cancel'; btn.onclick = () => l.disconnect(); }
+  else { btn.textContent = 'Connect'; btn.onclick = () => connectLite(l); }
+  actions.appendChild(btn);
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const bits = {
+    connected: [l.device.name, l.version && `firmware ${l.version}`, l.serial && `S/N ${l.serial}`],
+    connecting: ['Connecting…'], reconnecting: ['Connection dropped, reconnecting…'],
+    lost: ['Not reachable. Is it powered and in range?'], idle: ['Not connected'],
+  }[l.status];
+  meta.textContent = bits.filter(Boolean).join(' · ');
+
+  card.append(bulb, name, actions, meta);
+  return card;
+}
+
+function renderSchedules() {
+  const out = $('sOut');
+  out.textContent = '';
+  const ls = lites.filter(l => l.connected);
+  if (!ls.length) { out.innerHTML = '<p class="hint">Connect a light to see its schedules.</p>'; return; }
+  for (const l of ls) {
+    const sec = document.createElement('div');
+    sec.className = 'sched-light';
+    const head = document.createElement('div');
+    head.className = 'row';
+    const h = document.createElement('h3'); h.className = 'grow';
+    h.textContent = l.label + (l.rules ? ` · ${l.rules.length}/4` : '') + (l.selected ? '' : ' (not selected)');
+    head.appendChild(h);
+    sec.appendChild(head);
+
+    if (l.rulesError) { sec.insertAdjacentHTML('beforeend', '<p class="hint">Couldn\'t read schedules. Tap Refresh to retry.</p>'); }
+    else if (!l.rules) { sec.insertAdjacentHTML('beforeend', '<p class="hint">Loading…</p>'); }
+    else if (!l.rules.length) { sec.insertAdjacentHTML('beforeend', '<p class="hint">No schedules on this light.</p>'); }
+    else {
+      const ul = document.createElement('ul'); ul.className = 'rules';
+      for (const r of l.rules) ul.appendChild(ruleRow(l, r));
+      sec.appendChild(ul);
+    }
+    out.appendChild(sec);
+  }
+}
+
+function ruleRow(l, r) {
+  const li = document.createElement('li');
+  li.className = 'rule' + (r.enabled ? '' : ' disabled');
+  const text = document.createElement('div'); text.className = 'grow';
+  const time = document.createElement('div'); time.className = 'time'; time.textContent = `${pad(r.h)}:${pad(r.m)}`;
+  const what = document.createElement('div'); what.className = 'what';
+  if (r.on) {
+    const dot = document.createElement('span'); dot.className = 'dot'; dot.style.background = rgbCss(r.rgb);
+    what.append(dot, `On · ${Math.round(r.bri / 2)}% · ${daysText(r.days)}`);
+  } else what.textContent = `Off · ${daysText(r.days)}`;
+  text.append(time, what);
+
+  const sw = document.createElement('label'); sw.className = 'switch';
+  sw.innerHTML = '<input type="checkbox"><span class="track"></span>';
+  const cb = sw.querySelector('input'); cb.checked = r.enabled;
+  cb.setAttribute('aria-label', `Enable ${pad(r.h)}:${pad(r.m)} schedule`);
+  cb.onchange = async () => {
+    await l.send(P.schedule(1, r.id, cb.checked ? 1 : 0, r.on ? 1 : 0, r.days, r.h, r.m, ...r.rgb, r.bri || MAX_BRI));
+    await sleep(300); l.loadRules();
+  };
+
+  const del = document.createElement('button'); del.className = 'ghost danger'; del.textContent = 'Delete';
+  armed(del, 'Sure?', async () => { await l.send(P.scheduleDelete(r.id)); await sleep(400); l.loadRules(); });
+
+  li.append(text, sw, del);
+  return li;
+}
+
+function renderColor() {
+  const rgb = hexToRgb(state.color);
+  $('color').value = state.color;
+  $('hexTag').textContent = state.color.toUpperCase();
+  // Preview dims with brightness (never fully black, so the colour stays readable).
+  const k = 0.35 + 0.65 * state.bri / MAX_BRI;
+  $('preview').style.backgroundColor = state.power === false ? '#2a2a28' : rgbCss(rgb.map(v => Math.round(v * k)));
+  $('bri').value = state.bri;
+  $('briOut').textContent = `${Math.round(state.bri / MAX_BRI * 100)}%`;
+  $('powerOn').setAttribute('aria-pressed', String(state.power === true));
+  $('powerOff').setAttribute('aria-pressed', String(state.power === false));
+  document.querySelectorAll('#swatches button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.c === state.color)));
+  document.querySelectorAll('[data-effect]').forEach(b => b.setAttribute('aria-pressed', String(state.effect === +b.dataset.effect && state.effect !== 0)));
+  document.querySelectorAll('[data-pob]').forEach(b => b.setAttribute('aria-pressed', String(state.pob === +b.dataset.pob)));
+}
+
+// ---------------------------------------------------------------- connecting
+async function connectLite(l) {
+  try { await l.connect(); toast(`Connected to ${l.label}`); }
+  catch (e) { toast(`Couldn't connect to ${l.label}: ${errMsg(e)}`, true); }
+}
+
+$('addLight').onclick = async () => {
+  if (!navigator.bluetooth) {
+    const s = $('support'); s.hidden = false;
+    s.textContent = 'This browser has no Web Bluetooth. Use Chrome or Edge on Android/desktop, or the Bluefy browser on iPhone/iPad. The page must be opened over https.';
+    return;
+  }
+  let device;
   try {
     // namePrefix 'LITE' covers LITE, LITE1100 and LITESTRIP; 'Lite' covers mixed-case firmware names.
-    const opts = $('showAll').checked
+    device = await navigator.bluetooth.requestDevice($('showAll').checked
       ? { acceptAllDevices: true, optionalServices: [SVC] }
-      : { filters: [{ namePrefix: 'LITE' }, { namePrefix: 'Lite' }], optionalServices: [SVC] };
-    const device = await navigator.bluetooth.requestDevice(opts);
-    log(`picked ${device.name || '(no name)'} ${device.id}`);
-    $('status').textContent = 'Connecting…';
-    step = 'connect';
-    const lite = new Lite(device);
-    await lite.connect();
-    device.addEventListener('gattserverdisconnected', () => { lites = lites.filter(l => l !== lite); refreshUi(); log(device.name + ' disconnected'); });
-    lites.push(lite);
-    await lite.send(P.syncTime());
-    refreshUi();
+      : { filters: [{ namePrefix: 'LITE' }, { namePrefix: 'Lite' }], optionalServices: [SVC] });
   } catch (e) {
-    log(`${step} failed: ${errMsg(e)}`);
-    refreshUi();
-    $('status').textContent = `${step} failed: ${errMsg(e)}`;
+    if (e && e.name === 'NotFoundError') { log('device picker closed'); return; } // user cancelled
+    toast(`Couldn't open the device list: ${errMsg(e)}`, true); return;
   }
+  log(`picked ${device.name || '(no name)'} ${device.id}`);
+  let l = lites.find(x => x.id === device.id);
+  if (!l) { l = new Lite(device); lites.push(l); }
+  if (!l.connected) await connectLite(l);
 };
-$('disconnect').onclick = () => { lites.forEach(l => l.device.gatt.disconnect()); lites = []; refreshUi(); };
 
-$('on').onclick = () => all(() => P.fade(...rgb(), bri()));
-$('off').onclick = () => all(() => P.fade(0, 0, 0, 0));
-$('apply').onclick = () => all(() => P.color(...rgb(), bri()));
-let briTimer;
-$('bri').oninput = () => { clearTimeout(briTimer); briTimer = setTimeout(() => all(() => P.color(...rgb(), bri())), 120); };
-$('color').oninput = $('apply').onclick;
+// Chrome can list devices this site was allowed before; offer them for one-tap reconnect.
+(async () => {
+  if (!navigator.bluetooth || !navigator.bluetooth.getDevices) return;
+  try {
+    for (const d of await navigator.bluetooth.getDevices())
+      if (!lites.some(l => l.id === d.id)) lites.push(new Lite(d));
+    render();
+  } catch (e) { log('getDevices: ' + errMsg(e)); }
+})();
 
-const SW = ['#ff0000','#00ff00','#0000ff','#ffff00','#ffffff','#8a2be2','#ff69b4','#00ffff','#ee00ee','#ffa500','#000080','#800080','#27408b','#008080','#dda0dd','#dc143c'];
-SW.forEach(c => { const b = document.createElement('button'); b.style.background = c; b.title = c; b.setAttribute('aria-label', c);
-  b.onclick = () => { $('color').value = c; $('apply').onclick(); }; $('swatches').appendChild(b); });
+// ---------------------------------------------------------------- colour & power
+const SWATCHES = [
+  ['#ffffff', 'White'], ['#ffb450', 'Warm white'], ['#ff0000', 'Red'], ['#ffa500', 'Orange'], ['#ffff00', 'Yellow'],
+  ['#00ff00', 'Green'], ['#00ffff', 'Cyan'], ['#0000ff', 'Blue'], ['#8a2be2', 'Violet'],
+  ['#ee00ee', 'Magenta'], ['#ff69b4', 'Pink'], ['#dc143c', 'Crimson'], ['#daa520', 'Gold'], ['#40e0d0', 'Turquoise'],
+  ['#4169e1', 'Royal blue'], ['#008080', 'Teal'], ['#800080', 'Purple'], ['#000080', 'Navy'],
+];
+for (const [c, n] of SWATCHES) {
+  const b = document.createElement('button');
+  b.style.background = c; b.dataset.c = c; b.title = n; b.setAttribute('aria-label', n);
+  b.onclick = () => setColor(c, true);
+  $('swatches').appendChild(b);
+}
 
+function sendColor() {
+  const rgb = hexToRgb(state.color);
+  state.power = true; state.effect = null;
+  renderColor();
+  return each(() => P.color(...rgb, state.bri), 'color');
+}
+function setColor(c, persist) {
+  state.color = c.toLowerCase();
+  if (persist) store.set('color', state.color);
+  sendColor();
+}
+$('color').addEventListener('input', e => setColor(e.target.value, false));
+$('color').addEventListener('change', e => setColor(e.target.value, true));
+$('bri').addEventListener('input', e => { state.bri = +e.target.value; sendColor(); });
+$('bri').addEventListener('change', () => store.set('bri', state.bri));
+$('powerOn').onclick = () => { state.power = true; state.effect = null; renderColor(); each(() => P.on(...hexToRgb(state.color), state.bri)); };
+$('powerOff').onclick = () => { state.power = false; state.effect = null; renderColor(); each(() => P.off()); };
+
+// ---------------------------------------------------------------- effects
 document.querySelectorAll('[data-effect]').forEach(b => b.onclick = () => {
   const k = +b.dataset.effect;
-  all(() => k === 3 ? P.effect(3, 255, 255, 255, 200) : P.effect(k));
+  state.effect = k; if (k) state.power = true;
+  renderColor();
+  each(() => k === 3 ? P.effect(3, 255, 255, 255, MAX_BRI) : P.effect(k));
 });
-$('flash').onclick = () => all(() => P.flash(...rgb(), 200));
+$('flash').onclick = () => each(() => P.flash(...hexToRgb(state.color), MAX_BRI));
 
-$('tSet').onclick = async () => {
-  const at = new Date(Date.now() + +$('tMin').value * 60000);
-  await all(() => P.syncTime()); await sleep(60);
-  await all(() => P.timer(+$('tAction').value, at, ...rgb(), 200));
-  log('timer set for ' + at.toLocaleTimeString());
-};
-$('tCancel').onclick = () => all(() => P.timer(0, new Date(), 0, 0, 0, 0));
-
-DAY.forEach((d, i) => { const l = document.createElement('label'); l.innerHTML = `<input type="checkbox" checked data-day="${i}"> ${d}`; $('days').appendChild(l); });
-const daysMask = () => [...document.querySelectorAll('[data-day]')].reduce((m, c) => c.checked ? m | (1 << +c.dataset.day) : m, 0);
-
-async function listSchedules() {
-  const out = $('sOut'); out.innerHTML = '';
-  for (const l of lites) {
-    try {
-      const p = await l.request(P.scheduleRead(), 0x14, 4000);
-      const n = p[4] || 0;
-      if (!n) { out.insertAdjacentHTML('beforeend', `<li>${l.name}: no rules</li>`); continue; }
-      for (let i = 0; i < n; i++) {
-        const r = p.slice(5 + 15 * i, 20 + 15 * i);
-        if (r.length < 15) break;
-        const days = DAY.filter((_, k) => r[3] & (1 << k)).join(' ');
-        const li = document.createElement('li');
-        li.textContent = `${l.name}: #${r[0]} ${String(r[7]).padStart(2,'0')}:${String(r[8]).padStart(2,'0')} ${days} → ${r[2] ? `on rgb(${r[11]},${r[12]},${r[13]})` : 'off'}${r[1] ? '' : ' (disabled)'} `;
-        const del = document.createElement('button'); del.textContent = 'Delete'; del.className = 'danger';
-        del.onclick = async () => { await l.send(P.scheduleDelete(r[0])); await sleep(300); listSchedules(); };
-        li.appendChild(del); out.appendChild(li);
-      }
-    } catch (e) { const li = document.createElement('li'); li.textContent = `${l.name}: ${errMsg(e)}`; out.appendChild(li); }
-  }
+// ---------------------------------------------------------------- timer
+function setTimerAction(on) {
+  state.timerOn = on;
+  $('tOn').setAttribute('aria-pressed', String(on));
+  $('tOff').setAttribute('aria-pressed', String(!on));
 }
-$('sList').onclick = listSchedules;
+$('tOn').onclick = () => setTimerAction(true);
+$('tOff').onclick = () => setTimerAction(false);
+$('tMode').onchange = () => { const at = $('tMode').value === 'at'; $('tAt').hidden = !at; $('tInWrap').hidden = at; };
+$('tSet').onclick = async () => {
+  let at;
+  if ($('tMode').value === 'in') {
+    const min = +$('tMin').value;
+    if (!(min > 0)) { toast('Enter a number of minutes', true); return; }
+    at = new Date(Date.now() + min * 60000);
+  } else {
+    const [h, m] = $('tAt').value.split(':').map(Number);
+    if (isNaN(h)) { toast('Pick a time', true); return; }
+    at = new Date(); at.setHours(h, m, 0, 0);
+    if (at <= new Date()) at.setDate(at.getDate() + 1);
+  }
+  at.setMilliseconds(0);
+  await each(() => P.syncTime()); await sleep(60);
+  // the app sends its stored, gamma-corrected colour with timers
+  await each(() => P.timer(state.timerOn ? 1 : 2, at, ...hexToRgb(state.color).map(v => GAMMA[v]), state.bri));
+  const when = at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  $('tStatus').textContent = `Lights turn ${state.timerOn ? 'on' : 'off'} at ${when}` + (at.getDate() !== new Date().getDate() ? ' tomorrow' : '');
+  toast('Timer set');
+};
+$('tCancel').onclick = async () => {
+  await each(() => P.timer(0, new Date(), 0, 0, 0, 0));
+  $('tStatus').textContent = ''; toast('Timer cancelled');
+};
+
+// ---------------------------------------------------------------- schedules
+DAYS.forEach((d, i) => {
+  const b = document.createElement('button');
+  b.textContent = d; b.dataset.day = i; b.setAttribute('aria-label', ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][i]);
+  b.onclick = () => { state.days ^= 1 << i; renderDays(); };
+  $('days').appendChild(b);
+});
+function renderDays() { document.querySelectorAll('[data-day]').forEach(b => b.setAttribute('aria-pressed', String(!!(state.days & (1 << +b.dataset.day))))); }
+document.querySelectorAll('[data-preset]').forEach(b => b.onclick = () => { state.days = +b.dataset.preset; renderDays(); });
+function setSchedAction(on) {
+  state.schedOn = on;
+  $('sOn').setAttribute('aria-pressed', String(on));
+  $('sOff').setAttribute('aria-pressed', String(!on));
+}
+$('sOn').onclick = () => setSchedAction(true);
+$('sOff').onclick = () => setSchedAction(false);
+$('sRefresh').onclick = () => lites.filter(l => l.connected).forEach(l => { l.rules = null; l.rulesError = null; renderSchedules(); l.loadRules(); });
 $('sAdd').onclick = async () => {
   const [h, m] = $('sTime').value.split(':').map(Number);
-  await all(() => P.syncTime()); await sleep(60);
-  await all(() => P.schedule(0, 0, 1, +$('sAction').value, daysMask(), h, m, ...rgb(), 200));
-  await sleep(400); listSchedules();
+  if (isNaN(h)) { toast('Pick a time', true); return; }
+  if (!state.days) { toast('Pick at least one day', true); return; }
+  const ts = targets();
+  if (!ts.length) { noTargets(); return; }
+  const full = ts.filter(l => l.rules && l.rules.length >= 4);
+  if (full.length) toast(`${full.map(l => l.label).join(', ')} already has 4 schedules`, true);
+  const ok = ts.filter(l => !full.includes(l));
+  if (!ok.length) return;
+  await Promise.all(ok.map(async l => {
+    await l.send(P.syncTime()); await sleep(60);
+    await l.send(P.schedule(0, 0, 1, state.schedOn ? 1 : 0, state.days, h, m, ...hexToRgb(state.color), state.bri));
+    await sleep(400); await l.loadRules();
+  }));
+  toast('Schedule added');
 };
 
-document.querySelectorAll('[data-pob]').forEach(b => b.onclick = () => all(() => P.powerOn(b.dataset.pob === '1')));
-$('sync').onclick = () => all(() => P.syncTime());
-$('reset').onclick = () => { if (confirm('Factory-reset the connected light(s)?')) all(() => P.reset()); };
-$('info').onclick = async () => {
-  for (const l of lites) {
-    try {
-      const v = bytes(await l.info.readValue());
-      log(`${l.name} FFF1: ${hex(v)}` + (v.length >= 13 ? `  → firmware ${v[11]}.${String(v[12]).padStart(2, '0')}` : ''));
-      const s = await l.request(P.serial(), 0x11);
-      log(`${l.name} serial: ${new TextDecoder().decode(s.slice(4, 20))}`);
-    } catch (e) { log(l.name + ': ' + errMsg(e)); }
-  }
-};
-refreshUi();
+// ---------------------------------------------------------------- settings
+document.querySelectorAll('[data-pob]').forEach(b => b.onclick = () => {
+  state.pob = +b.dataset.pob; store.set('pob', state.pob); renderColor();
+  each(() => P.powerOn(state.pob === 1));
+  toast(state.pob ? 'Will come back with the last colour' : 'Will come back white');
+});
+$('sync').onclick = async () => { await each(() => P.syncTime()); toast('Clock synced'); };
+armed($('reset'), 'Tap again to reset', async () => { await each(() => P.reset()); toast('Factory reset sent'); });
+
+// ---------------------------------------------------------------- init
+setTimerAction(false); setSchedAction(true); renderDays(); renderColor(); render();
 </script>
 </body>
 </html>

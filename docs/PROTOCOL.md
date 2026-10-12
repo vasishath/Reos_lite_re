@@ -68,7 +68,7 @@ The app sends this before every timer or schedule command and after connecting.
 `ACTION sec min hour day month yearHi yearLo R G B BRI`
 * `ACTION`: `1` = turn on, `2` = turn off, `0` = cancel.
 * The time is absolute, in the light's clock, so send SYNC_TIME first.
-* The colour is the one the light should come on with. The app sends the last colour and brightness 200.
+* The colour is the one the light should come on with. The app sends its last colour (already gamma-corrected) and brightness 200.
 * The app also has a shorter variant without `R G B BRI`.
 
 ### 0x0A CHECK
@@ -86,7 +86,7 @@ The app sends this before every timer or schedule command and after connecting.
 ### 0x0D FADE (smooth on/off/transition)
 `R G B BRI SPEED 00 00`
 * Off: `00 00 00 00 05 00 00`
-* On: `R G B BRI 05 00 00`, using the last colour
+* On: `R G B BRI 05 00 00`, using the last colour. The app stores colours after gamma correction, so these values are gamma-corrected too.
 * After an alert the app restores the colour with `SPEED = 2`.
 
 ### 0x11 READ_SERIAL

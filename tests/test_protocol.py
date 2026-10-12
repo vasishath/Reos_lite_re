@@ -85,8 +85,8 @@ class TestCommandsMatchApp(unittest.TestCase):
     def test_timer(self):
         c = NOW
         exp = java([15, 15, 9, 0, 2, c.second, c.minute, c.hour, c.day, c.month,
-                    c.year // 256, c.year % 256, 1, 2, 3, -56, 0, -1, -1], 16)
-        self.assertEqual(p.timer(p.TimerAction.OFF, NOW, 1, 2, 3), exp)
+                    c.year // 256, c.year % 256, p.GAMMA[255], p.GAMMA[128], p.GAMMA[60], -56, 0, -1, -1], 16)
+        self.assertEqual(p.timer(p.TimerAction.OFF, NOW, 255, 128, 60), exp)
 
     def test_schedule_add_on(self):
         d = NOW.date()
