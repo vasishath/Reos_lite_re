@@ -61,6 +61,9 @@
       <button id="disconnect" disabled>Disconnect all</button>
       <span id="status" class="grow">Not connected</span>
     </div>
+    <div class="row">
+      <label><input type="checkbox" id="showAll"> Show all Bluetooth devices (if your light isn't listed)</label>
+    </div>
     <div id="devices"></div>
   </section>
 
@@ -137,7 +140,12 @@
 
 <script>
 // Protocol: see docs/PROTOCOL.md.  Frame = 0F LEN CMD 00 PAYLOAD.. CHK FF FF
-const SVC = 0xfff0, CH_INFO = 0xfff1, CH_CMD = 0xfff3, CH_NOTIFY = 0xfff4;
+// Full 128-bit strings: iOS Web Bluetooth browsers (Bluefy, WebBLE) don't all accept 16-bit numbers.
+const uuid = n => `0000${n.toString(16)}-0000-1000-8000-00805f9b34fb`;
+const SVC = uuid(0xfff0), CH_INFO = uuid(0xfff1), CH_CMD = uuid(0xfff3), CH_NOTIFY = uuid(0xfff4);
+const errMsg = e => e == null ? `unknown error (${e})`
+  : typeof e === 'string' ? e : [e.name, e.message].filter(Boolean).join(': ') || String(e);
+const bytes = v => new Uint8Array(v.buffer, v.byteOffset || 0, v.byteLength); // DataView -> bytes
 const GAMMA = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,4,4,4,4,4,5,5,5,5,6,6,6,6,7,7,7,7,8,8,8,9,9,9,10,10,10,11,11,11,12,12,13,13,13,14,14,15,15,16,16,17,17,18,18,19,19,20,20,21,21,22,22,23,24,24,25,25,26,27,27,28,29,29,30,31,32,32,33,34,35,35,36,37,38,39,39,40,41,42,43,44,45,46,47,48,49,50,50,51,52,54,55,56,57,58,59,60,61,62,63,64,66,67,68,69,70,72,73,74,75,77,78,79,81,82,83,85,86,87,89,90,92,93,95,96,98,99,101,102,104,105,107,109,110,112,114,115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142,144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255];
 const DAY = ['Su','M','T','W','Th','F','S'];
 
@@ -184,9 +192,9 @@ class Lite {
     this.info = await svc.getCharacteristic(CH_INFO);
     try {
       this.notify = await svc.getCharacteristic(CH_NOTIFY);
-      this.notify.addEventListener('characteristicvaluechanged', e => this.onNotify(new Uint8Array(e.target.value.buffer)));
+      this.notify.addEventListener('characteristicvaluechanged', e => this.onNotify(bytes(e.target.value)));
       await this.notify.startNotifications();
-    } catch (e) { log('notifications unavailable: ' + e.message); }
+    } catch (e) { log('notifications unavailable: ' + errMsg(e)); }
   }
   onNotify(d) {
     log(`${this.device.name} <- ${hex(d)}`);
@@ -206,11 +214,13 @@ class Lite {
       for (let i = 0; i < pkt.length; i += 20) {
         const part = pkt.slice(i, i + 20);
         log(`${this.device.name} -> ${hex(part)}`);
-        if (this.cmd.writeValueWithResponse && this.cmd.properties.write) await this.cmd.writeValueWithResponse(part);
-        else await this.cmd.writeValueWithoutResponse(part);
+        const c = this.cmd, props = c.properties || {};
+        if (c.writeValueWithResponse && props.write) await c.writeValueWithResponse(part);
+        else if (c.writeValueWithoutResponse && props.writeWithoutResponse) await c.writeValueWithoutResponse(part);
+        else await c.writeValue(part); // older API, still the only one some browsers have
         if (i + 20 < pkt.length) await sleep(50);
       }
-    }).catch(e => log('write failed: ' + e.message));
+    }).catch(e => log('write failed: ' + errMsg(e)));
     return this.queue;
   }
   request(pkt, cmd, ms = 3000) {
@@ -240,19 +250,27 @@ function refreshUi() {
 
 $('connect').onclick = async () => {
   if (!navigator.bluetooth) { alert('Web Bluetooth is not available. Use Chrome or Edge over HTTPS (or localhost).'); return; }
+  let step = 'requestDevice';
   try {
-    const device = await navigator.bluetooth.requestDevice({
-      filters: [{ name: 'LITE' }, { name: 'LITE1100' }, { name: 'LITESTRIP' }, { name: 'Lite' }, { namePrefix: 'Lite' }, { namePrefix: 'LITE' }],
-      optionalServices: [SVC],
-    });
+    // namePrefix 'LITE' covers LITE, LITE1100 and LITESTRIP; 'Lite' covers mixed-case firmware names.
+    const opts = $('showAll').checked
+      ? { acceptAllDevices: true, optionalServices: [SVC] }
+      : { filters: [{ namePrefix: 'LITE' }, { namePrefix: 'Lite' }], optionalServices: [SVC] };
+    const device = await navigator.bluetooth.requestDevice(opts);
+    log(`picked ${device.name || '(no name)'} ${device.id}`);
     $('status').textContent = 'Connecting…';
+    step = 'connect';
     const lite = new Lite(device);
     await lite.connect();
     device.addEventListener('gattserverdisconnected', () => { lites = lites.filter(l => l !== lite); refreshUi(); log(device.name + ' disconnected'); });
     lites.push(lite);
     await lite.send(P.syncTime());
     refreshUi();
-  } catch (e) { log(e.message); refreshUi(); }
+  } catch (e) {
+    log(`${step} failed: ${errMsg(e)}`);
+    refreshUi();
+    $('status').textContent = `${step} failed: ${errMsg(e)}`;
+  }
 };
 $('disconnect').onclick = () => { lites.forEach(l => l.device.gatt.disconnect()); lites = []; refreshUi(); };
 
@@ -301,7 +319,7 @@ async function listSchedules() {
         del.onclick = async () => { await l.send(P.scheduleDelete(r[0])); await sleep(300); listSchedules(); };
         li.appendChild(del); out.appendChild(li);
       }
-    } catch (e) { out.insertAdjacentHTML('beforeend', `<li>${l.name}: ${e.message}</li>`); }
+    } catch (e) { const li = document.createElement('li'); li.textContent = `${l.name}: ${errMsg(e)}`; out.appendChild(li); }
   }
 }
 $('sList').onclick = listSchedules;
@@ -318,11 +336,11 @@ $('reset').onclick = () => { if (confirm('Factory-reset the connected light(s)?'
 $('info').onclick = async () => {
   for (const l of lites) {
     try {
-      const v = new Uint8Array((await l.info.readValue()).buffer);
+      const v = bytes(await l.info.readValue());
       log(`${l.name} FFF1: ${hex(v)}` + (v.length >= 13 ? `  → firmware ${v[11]}.${String(v[12]).padStart(2, '0')}` : ''));
       const s = await l.request(P.serial(), 0x11);
       log(`${l.name} serial: ${new TextDecoder().decode(s.slice(4, 20))}`);
-    } catch (e) { log(l.name + ': ' + e.message); }
+    } catch (e) { log(l.name + ': ' + errMsg(e)); }
   }
 };
 refreshUi();
